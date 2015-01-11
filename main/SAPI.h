@@ -220,11 +220,11 @@ struct _sapi_module_struct {
 	char *name;
 	char *pretty_name;
 
-	int (*startup)(struct _sapi_module_struct *sapi_module);
-	int (*shutdown)(struct _sapi_module_struct *sapi_module);
+	int (*startup)(struct _sapi_module_struct *sapi_module); //启动函数
+	int (*shutdown)(struct _sapi_module_struct *sapi_module); //关闭方法
 
-	int (*activate)(TSRMLS_D);
-	int (*deactivate)(TSRMLS_D);
+	int (*activate)(TSRMLS_D); //激活
+	int (*deactivate)(TSRMLS_D); //停用
 
 	int (*ub_write)(const char *str, unsigned int str_length TSRMLS_DC);
 	void (*flush)(void *server_context TSRMLS_DC);
