@@ -437,14 +437,14 @@ static void sapi_cli_ini_defaults(HashTable *configuration_hash)
 	INI_DEFAULT("display_errors", "1");
 }
 /* }}} */
-
+//SAPI结构体，对应各个阶段的处理函数
 /* {{{ sapi_module_struct cli_sapi_module
  */
 static sapi_module_struct cli_sapi_module = {
 	"cli",							/* name */
 	"Command Line Interface",    	/* pretty name */
 
-	php_cli_startup,				/* startup */
+	php_cli_startup,				/* startup */ //各种初始化操作及初始化zend核心组件
 	php_module_shutdown_wrapper,	/* shutdown */
 
 	NULL,							/* activate */
@@ -1174,7 +1174,7 @@ static int do_cli(int argc, char **argv TSRMLS_DC) /* {{{ */
 
 out:
 	if (request_started) {
-		php_request_shutdown((void *) 0);
+		php_request_shutdown((void *) 0);//关闭请求
 	}
 	if (translated_path) {
 		free(translated_path);
@@ -1216,7 +1216,7 @@ int main(int argc, char *argv[])
 	char *ini_entries = NULL;
 	int ini_entries_len = 0;
 	int ini_ignore = 0;
-	sapi_module_struct *sapi_module = &cli_sapi_module;
+	sapi_module_struct *sapi_module = &cli_sapi_module; //sapi结构
 
 	/*
 	 * Do not move this initialization. It needs to happen before argv is used
@@ -1266,7 +1266,7 @@ int main(int argc, char *argv[])
 	setmode(_fileno(stdout), O_BINARY);		/* make the stdio mode be binary */
 	setmode(_fileno(stderr), O_BINARY);		/* make the stdio mode be binary */
 #endif
-
+//根据参数选择处理程序
 	while ((c = php_getopt(argc, argv, OPTIONS, &php_optarg, &php_optind, 0, 2))!=-1) {
 		switch (c) {
 			case 'c':

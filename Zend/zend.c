@@ -635,6 +635,15 @@ static zend_bool php_auto_globals_create_globals(const char *name, uint name_len
 }
 /* }}} */
 
+
+/**
+ * @Synopsis  Zend引擎启动函数
+ *
+ * @Param utility_functions
+ * @Param TSRMLS_DC
+ *
+ * @Returns   
+ */
 int zend_startup(zend_utility_functions *utility_functions, char **extensions TSRMLS_DC) /* {{{ */
 {
 #ifdef ZTS
@@ -746,7 +755,7 @@ int zend_startup(zend_utility_functions *utility_functions, char **extensions TS
 
 	zend_interned_strings_init(TSRMLS_C);
 	zend_startup_builtin_functions(TSRMLS_C);
-	zend_register_standard_constants(TSRMLS_C);
+	zend_register_standard_constants(TSRMLS_C); /*标准常量注册*/
 	zend_register_auto_global("GLOBALS", sizeof("GLOBALS") - 1, 1, php_auto_globals_create_globals TSRMLS_CC);
 
 #ifndef ZTS
@@ -920,10 +929,10 @@ ZEND_API void zend_activate(TSRMLS_D) /* {{{ */
 #ifdef ZTS
 	virtual_cwd_activate(TSRMLS_C);
 #endif
-	gc_reset(TSRMLS_C);
-	init_compiler(TSRMLS_C);
-	init_executor(TSRMLS_C);
-	startup_scanner(TSRMLS_C);
+	gc_reset(TSRMLS_C); //重置垃圾收集机制
+	init_compiler(TSRMLS_C); //初始化编译器
+	init_executor(TSRMLS_C); //初始化中间代码执行过程
+	startup_scanner(TSRMLS_C); //
 }
 /* }}} */
 
@@ -1319,7 +1328,7 @@ ZEND_API int zend_execute_scripts(int type TSRMLS_DC, zval **retval, int file_co
             }
         }
        
-		EG(active_op_array) = zend_compile_file(file_handle, type TSRMLS_CC);
+		EG(active_op_array) = zend_compile_file(file_handle, type TSRMLS_CC); //词法分析，语法分析，中间代码生成
 		if (file_handle->opened_path) {
 			int dummy = 1;
 			zend_hash_add(&EG(included_files), file_handle->opened_path, strlen(file_handle->opened_path) + 1, (void *)&dummy, sizeof(int), NULL);
@@ -1327,7 +1336,7 @@ ZEND_API int zend_execute_scripts(int type TSRMLS_DC, zval **retval, int file_co
 		zend_destroy_file_handle(file_handle TSRMLS_CC);
 		if (EG(active_op_array)) {
 			EG(return_value_ptr_ptr) = retval ? retval : NULL;
-			zend_execute(EG(active_op_array) TSRMLS_CC);
+			zend_execute(EG(active_op_array) TSRMLS_CC); //执行中间代码
 			zend_exception_restore(TSRMLS_C);
 			if (EG(exception)) {
 				if (EG(user_exception_handler)) {
@@ -1366,7 +1375,7 @@ ZEND_API int zend_execute_scripts(int type TSRMLS_DC, zval **retval, int file_co
 	}
 	va_end(files);
 	EG(active_op_array) = orig_op_array;
-	EG(return_value_ptr_ptr) = orig_retval_ptr_ptr;
+	EG(return_value_ptr_ptr) = orig_retval_ptr_ptr; //返回结果 
     CG(interactive) = orig_interactive;
 
 	return SUCCESS;

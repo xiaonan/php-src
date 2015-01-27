@@ -460,11 +460,11 @@ static sapi_module_struct apache_sapi_module = {
 	"apache",						/* name */
 	"Apache",						/* pretty name */
 									
-	php_apache_startup,				/* startup */
-	php_module_shutdown_wrapper,	/* shutdown */
+	php_apache_startup,				/* startup 启动函数*/
+	php_module_shutdown_wrapper,	/* shutdown 关闭处理函数*/
 
-	php_apache_sapi_activate,		/* activate */
-	NULL,							/* deactivate */
+	php_apache_sapi_activate,		/* activate 激活函数*/
+	NULL,							/* deactivate 关闭激活函数*/
 
 	sapi_apache_ub_write,			/* unbuffered write */
 	sapi_apache_flush,				/* flush */

@@ -344,6 +344,7 @@ extern zend_module_entry php_apache_module;
 
 static int php_apache2_startup(sapi_module_struct *sapi_module)
 {
+    //初始化PHP
 	if (php_module_startup(sapi_module, &php_apache_module, 1)==FAILURE) {
 		return FAILURE;
 	}
@@ -354,7 +355,7 @@ static sapi_module_struct apache2_sapi_module = {
 	"apache2handler",
 	"Apache 2.0 Handler",
 
-	php_apache2_startup,				/* startup */
+	php_apache2_startup,				/* startup */ //初始化PHP
 	php_module_shutdown_wrapper,			/* shutdown */
 
 	NULL,						/* activate */
@@ -371,8 +372,8 @@ static sapi_module_struct apache2_sapi_module = {
 	php_apache_sapi_send_headers,			/* send headers handler */
 	NULL,						/* send header handler */
 
-	php_apache_sapi_read_post,			/* read POST data */
-	php_apache_sapi_read_cookies,			/* read Cookies */
+	php_apache_sapi_read_post,			/* read POST data */ //读取post信息
+	php_apache_sapi_read_cookies,			/* read Cookies */ //读取cookie信息
 
 	php_apache_sapi_register_variables,
 	php_apache_sapi_log_message,			/* Log message */
@@ -452,8 +453,8 @@ php_apache_server_startup(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp
 #ifdef ZTS
 	tsrm_startup(1, 1, 0, NULL);
 #endif
-	sapi_startup(&apache2_sapi_module);
-	apache2_sapi_module.startup(&apache2_sapi_module);
+	sapi_startup(&apache2_sapi_module); //启动SAPI
+	apache2_sapi_module.startup(&apache2_sapi_module); //注册sapi modle struct
 	apr_pool_cleanup_register(pconf, NULL, php_apache_server_shutdown, apr_pool_cleanup_null);
 	php_apache_add_version(pconf);
 
@@ -701,10 +702,10 @@ static void php_apache_child_init(apr_pool_t *pchild, server_rec *s)
 
 void php_ap2_register_hook(apr_pool_t *p)
 {
-	ap_hook_pre_config(php_pre_config, NULL, NULL, APR_HOOK_MIDDLE);
-	ap_hook_post_config(php_apache_server_startup, NULL, NULL, APR_HOOK_MIDDLE);
-	ap_hook_handler(php_handler, NULL, NULL, APR_HOOK_MIDDLE);
-	ap_hook_child_init(php_apache_child_init, NULL, NULL, APR_HOOK_MIDDLE);
+	ap_hook_pre_config(php_pre_config, NULL, NULL, APR_HOOK_MIDDLE);  //服务器启动时调用
+	ap_hook_post_config(php_apache_server_startup, NULL, NULL, APR_HOOK_MIDDLE); //服务器启动时调用, 启动PHP
+	ap_hook_handler(php_handler, NULL, NULL, APR_HOOK_MIDDLE); //服务器处理请求时调用
+	ap_hook_child_init(php_apache_child_init, NULL, NULL, APR_HOOK_MIDDLE); //服务器启动时调用
 }
 
 /*

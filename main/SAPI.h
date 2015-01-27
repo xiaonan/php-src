@@ -216,6 +216,9 @@ SAPI_API double sapi_get_request_time(TSRMLS_D);
 SAPI_API void sapi_terminate_process(TSRMLS_D);
 END_EXTERN_C()
 
+    /**
+     * @Synopsis  每个模块都有这个结构，这个结构制定了一个规范，每个模块都应该有哪些功能，这些功能对应的处理函数，都在这里进行了规定
+     */
 struct _sapi_module_struct {
 	char *name;
 	char *pretty_name;
@@ -238,7 +241,7 @@ struct _sapi_module_struct {
 	void (*send_header)(sapi_header_struct *sapi_header, void *server_context TSRMLS_DC);
 
 	int (*read_post)(char *buffer, uint count_bytes TSRMLS_DC);
-	char *(*read_cookies)(TSRMLS_D);
+	char *(*read_cookies)(TSRMLS_D); //读取cookie
 
 	void (*register_server_variables)(zval *track_vars_array TSRMLS_DC);
 	void (*log_message)(char *message TSRMLS_DC);

@@ -1509,7 +1509,7 @@ static int php_start_sapi(TSRMLS_D)
 
 			zend_activate(TSRMLS_C);
 			zend_set_timeout(EG(timeout_seconds), 1);
-			zend_activate_modules(TSRMLS_C);
+			zend_activate_modules(TSRMLS_C); //请求模块初始化(RINIT)
 			PG(modules_activated)=1;
 		} zend_catch {
 			retval = FAILURE;
@@ -1525,6 +1525,7 @@ static int php_start_sapi(TSRMLS_D)
 /* {{{ php_request_startup
  */
 #ifndef APACHE_HOOKS
+//请求初始化操作
 int php_request_startup(TSRMLS_D)
 {
 	int retval = SUCCESS;
@@ -1553,8 +1554,8 @@ int php_request_startup(TSRMLS_D)
 		PG(connection_status) = PHP_CONNECTION_NORMAL;
 		PG(in_user_include) = 0;
 
-		zend_activate(TSRMLS_C);
-		sapi_activate(TSRMLS_C);
+		zend_activate(TSRMLS_C); //激活zend引擎
+		sapi_activate(TSRMLS_C); //激活SAPI
 
 #ifdef ZEND_SIGNALS
 		zend_signal_activate(TSRMLS_C);
@@ -1611,7 +1612,7 @@ int php_request_startup(TSRMLS_D)
 	signal(SIGCHLD, sigchld_handler);
 #endif
 
-	if (php_start_sapi() == FAILURE) {
+	if (php_start_sapi() == FAILURE) { //RINIT模块请求初始化
 		return FAILURE;
 	}
 
@@ -1983,12 +1984,13 @@ void dummy_invalid_parameter_handler(
 	}
 }
 #endif
-
+//启动的初始化过程，这里是php进程启动时需要运行的地方,也就是最开始运行的地方 
 /* {{{ php_module_startup
  */
 int php_module_startup(sapi_module_struct *sf, zend_module_entry *additional_modules, uint num_additional_modules)
 {
-	zend_utility_functions zuf;
+    //初始化若干全局变量及常量
+	zend_utility_functions zuf; 
 	zend_utility_values zuv;
 	int retval = SUCCESS, module_number=0;	/* for REGISTER_INI_ENTRIES() */
 	char *php_os;
@@ -2054,7 +2056,7 @@ int php_module_startup(sapi_module_struct *sf, zend_module_entry *additional_mod
 	zuf.vspprintf_function = vspprintf;
 	zuf.getenv_function = sapi_getenv;
 	zuf.resolve_path_function = php_resolve_path_for_zend;
-	zend_startup(&zuf, NULL TSRMLS_CC);
+	zend_startup(&zuf, NULL TSRMLS_CC); //初始化zend引擎及核心组件
 
 #ifdef ZTS
 	executor_globals = ts_resource(executor_globals_id);
@@ -2179,6 +2181,7 @@ int php_module_startup(sapi_module_struct *sf, zend_module_entry *additional_mod
 	php_output_register_constants(TSRMLS_C);
 	php_rfc1867_register_constants(TSRMLS_C);
 
+    //解析php.ini文件
 	/* this will read in php.ini, set up the configuration parameters,
 	   load zend extensions and register php function extensions
 	   to be loaded later */
@@ -2207,10 +2210,11 @@ int php_module_startup(sapi_module_struct *sf, zend_module_entry *additional_mod
 
 	zuv.html_errors = 1;
 	zuv.import_use_extension = ".php";
-	php_startup_auto_globals(TSRMLS_C);
+	php_startup_auto_globals(TSRMLS_C); //全局操作函数的初始化
 	zend_set_utility_values(&zuv);
-	php_startup_sapi_content_types(TSRMLS_C);
+	php_startup_sapi_content_types(TSRMLS_C); //填充zend_module_struct中treat_data成员
 
+    //初始化静态构建的模块和共享模块(MINIT)
 	/* startup extensions statically compiled in */
 	if (php_register_internal_extensions_func(TSRMLS_C) == FAILURE) {
 		php_printf("Unable to start builtin modules\n");
@@ -2244,6 +2248,7 @@ int php_module_startup(sapi_module_struct *sf, zend_module_entry *additional_mod
 		}
 	}
 
+    //禁用函数和类
 	/* disable certain classes and functions as requested by php.ini */
 	php_disable_functions(TSRMLS_C);
 	php_disable_classes(TSRMLS_C);
@@ -2548,7 +2553,7 @@ PHPAPI int php_execute_simple_script(zend_file_handle *primary_file, zval **ret 
 			php_ignore_value(VCWD_GETCWD(old_cwd, OLD_CWD_SIZE-1));
 			VCWD_CHDIR_FILE(primary_file->filename);
 		}
-		zend_execute_scripts(ZEND_REQUIRE TSRMLS_CC, ret, 1, primary_file);
+		zend_execute_scripts(ZEND_REQUIRE TSRMLS_CC, ret, 1, primary_file); //执行文件
 	} zend_end_try();
 
 	if (old_cwd[0] != '\0') {

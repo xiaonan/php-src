@@ -1727,6 +1727,14 @@ static zend_module_entry cgi_module_entry = {
 	STANDARD_MODULE_PROPERTIES
 };
 
+/**
+ * @Synopsis  cgi调用php的入口
+ *
+ * @Param argc
+ * @Param argv[]
+ *
+ * @Returns   
+ */
 /* {{{ main
  */
 int main(int argc, char *argv[])
@@ -1796,7 +1804,7 @@ int main(int argc, char *argv[])
 	tsrm_ls = ts_resource(0);
 #endif
 
-	sapi_startup(&cgi_sapi_module);
+	sapi_startup(&cgi_sapi_module); //sapi启动
 	fastcgi = fcgi_is_fastcgi();
 	cgi_sapi_module.php_ini_path_override = NULL;
 
@@ -1823,7 +1831,7 @@ int main(int argc, char *argv[])
 		/* we've got query string that has no = - apache CGI will pass it to command line */
 		unsigned char *p;
 		decoded_query_string = strdup(query_string);
-		php_url_decode(decoded_query_string, strlen(decoded_query_string));
+		php_url_decode(decoded_query_string, strlen(decoded_query_string)); //处理请求url
 		for (p = decoded_query_string; *p &&  *p <= ' '; p++) {
 			/* skip all leading spaces */
 		}
@@ -1962,7 +1970,7 @@ consult the installation file that came with this distribution, or visit \n\
 		if (getenv("PHP_FCGI_BACKLOG")) {
 			backlog = atoi(getenv("PHP_FCGI_BACKLOG"));
 		}
-		fcgi_fd = fcgi_listen(bindpath, backlog);
+		fcgi_fd = fcgi_listen(bindpath, backlog); //监听
 		if (fcgi_fd < 0) {
 			fprintf(stderr, "Couldn't create FastCGI listen socket on port %s\n", bindpath);
 #ifdef ZTS
@@ -2132,7 +2140,8 @@ consult the installation file that came with this distribution, or visit \n\
 			fcgi_impersonate();
 		}
 #endif
-		while (!fastcgi || fcgi_accept_request(request) >= 0) {
+        //阻塞等待链接
+		while (!fastcgi || fcgi_accept_request(request) >= 1) {
 			SG(server_context) = fastcgi ? (void *) request : (void *) 1;
 			init_request_info(request TSRMLS_CC);
 			CG(interactive) = 0;

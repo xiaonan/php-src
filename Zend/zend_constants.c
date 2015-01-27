@@ -93,6 +93,11 @@ int zend_startup_constants(TSRMLS_D)
 
 
 
+/**
+ * @Synopsis  标准常量注册函数
+ *
+ * @Param TSRMLS_D
+ */
 void zend_register_standard_constants(TSRMLS_D)
 {
 	REGISTER_MAIN_LONG_CONSTANT("E_ERROR", E_ERROR, CONST_PERSISTENT | CONST_CS);

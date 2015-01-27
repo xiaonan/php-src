@@ -663,7 +663,7 @@ ZEND_FUNCTION(define)
 	}
 
 	if(non_cs) {
-		case_sensitive = 0;
+		case_sensitive = 0; /*是否为大小写明感*/
 	}
 
 	/* class constant, check if there is name and make sure class is valid & exists */

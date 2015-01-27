@@ -149,6 +149,7 @@ ZEND_API int _zend_hash_init(HashTable *ht, uint nSize, dtor_func_t pDestructor,
 
 	if (nSize >= 0x80000000) {
 		/* prevent overflow */
+        //为了防止内存溢出，hashTable的最大大小
 		ht->nTableSize = 0x80000000;
 	} else {
 		while ((1U << i) < nSize) {
@@ -203,11 +204,13 @@ ZEND_API int _zend_hash_add_or_update(HashTable *ht, const char *arKey, uint nKe
 
 	CHECK_INIT(ht);
 
+    //算出来hash key后需要根据hashTable的长度，把nIndex限制在这个长度内
 	h = zend_inline_hash_func(arKey, nKeyLength);
 	nIndex = h & ht->nTableMask;
 
 	p = ht->arBuckets[nIndex];
 	while (p != NULL) {
+        //if条件满足，表示要插入的key已经存在,覆盖原来的值
 		if (p->arKey == arKey ||
 			((p->h == h) && (p->nKeyLength == nKeyLength) && !memcmp(p->arKey, arKey, nKeyLength))) {
 				if (flag & HASH_ADD) {
@@ -227,6 +230,7 @@ ZEND_API int _zend_hash_add_or_update(HashTable *ht, const char *arKey, uint nKe
 		}
 		p = p->pNext;
 	}
+    //执行到这里，表示没找到已有元素满足这个key,需要重新申请一个链表的节点空间，来存储这个值
 	
 	if (IS_INTERNED(arKey)) {
 		p = (Bucket *) pemalloc(sizeof(Bucket), ht->persistent);
@@ -239,6 +243,7 @@ ZEND_API int _zend_hash_add_or_update(HashTable *ht, const char *arKey, uint nKe
 	p->nKeyLength = nKeyLength;
 	INIT_DATA(ht, p, pData, nDataSize);
 	p->h = h;
+    //下面这个函数是把新增的节点放到链表的头部
 	CONNECT_TO_BUCKET_DLLIST(p, ht->arBuckets[nIndex]);
 	if (pDest) {
 		*pDest = p->pData;
@@ -312,10 +317,12 @@ ZEND_API int _zend_hash_quick_add_or_update(HashTable *ht, const char *arKey, ui
 
 	HANDLE_BLOCK_INTERRUPTIONS();
 	ht->arBuckets[nIndex] = p;
+    //下面的函数是重新调整整个hashTable的结构
 	CONNECT_TO_GLOBAL_DLLIST(p, ht);
 	HANDLE_UNBLOCK_INTERRUPTIONS();
 
 	ht->nNumOfElements++;
+    //下面的函数是在hashTable满的时候，重新申请更大的空间
 	ZEND_HASH_IF_FULL_DO_RESIZE(ht);		/* If the Hash table is full, resize it */
 	return SUCCESS;
 }
@@ -392,7 +399,11 @@ ZEND_API int _zend_hash_index_update_or_next_insert(HashTable *ht, ulong h, void
 	return SUCCESS;
 }
 
-
+/**
+ * @Synopsis  当hashTable满时，重新分配空间，重置hashTable
+ *
+ * @Param ht
+ */
 static void zend_hash_do_resize(HashTable *ht)
 {
 	Bucket **t;
@@ -402,12 +413,13 @@ static void zend_hash_do_resize(HashTable *ht)
 
 	IS_CONSISTENT(ht);
 
-	if ((ht->nTableSize << 1) > 0) {	/* Let's double the table size */
+	if ((ht->nTableSize << 1) > 0) {	/* Let's double the table size 空间是原来的两倍*/
 		t = (Bucket **) perealloc(ht->arBuckets, (ht->nTableSize << 1) * sizeof(Bucket *), ht->persistent);
 		HANDLE_BLOCK_INTERRUPTIONS();
 		ht->arBuckets = t;
 		ht->nTableSize = (ht->nTableSize << 1);
 		ht->nTableMask = ht->nTableSize - 1;
+        //通过rehash对原来的hastTable元素重新hash
 		zend_hash_rehash(ht);
 		HANDLE_UNBLOCK_INTERRUPTIONS();
 	}
