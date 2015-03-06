@@ -33003,10 +33003,10 @@ static int ZEND_FASTCALL  ZEND_ASSIGN_OBJ_SPEC_CV_CONST_HANDLER(ZEND_OPCODE_HAND
 	ZEND_VM_INC_OPCODE();
 	ZEND_VM_NEXT_OPCODE();
 }
-
+//$arr[123]='fdsf'赋值时调用的函数
 static int ZEND_FASTCALL  ZEND_ASSIGN_DIM_SPEC_CV_CONST_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
-	USE_OPLINE
+	USE_OPLINE /*使用opline, opline指向当前opcode执行的行*/
 
 	zval **object_ptr;
 
@@ -33035,10 +33035,10 @@ static int ZEND_FASTCALL  ZEND_ASSIGN_DIM_SPEC_CV_CONST_HANDLER(ZEND_OPCODE_HAND
 		zval *dim = opline->op2.zv;
 		zval **variable_ptr_ptr;
 
-		zend_fetch_dimension_address(&EX_T((opline+1)->op2.var), object_ptr, dim, IS_CONST, BP_VAR_W TSRMLS_CC);
+		zend_fetch_dimension_address(&EX_T((opline+1)->op2.var), object_ptr, dim, IS_CONST, BP_VAR_W TSRMLS_CC); //给数组的key找地址
 
-		value = get_zval_ptr((opline+1)->op1_type, &(opline+1)->op1, execute_data, &free_op_data1, BP_VAR_R);
-		variable_ptr_ptr = _get_zval_ptr_ptr_var((opline+1)->op2.var, execute_data, &free_op_data2 TSRMLS_CC);
+		value = get_zval_ptr((opline+1)->op1_type, &(opline+1)->op1, execute_data, &free_op_data1, BP_VAR_R); //左值
+		variable_ptr_ptr = _get_zval_ptr_ptr_var((opline+1)->op2.var, execute_data, &free_op_data2 TSRMLS_CC); //右值
 		if (UNEXPECTED(variable_ptr_ptr == NULL)) {
 			if (zend_assign_to_string_offset(&EX_T((opline+1)->op2.var), value, (opline+1)->op1_type TSRMLS_CC)) {
 				if (RETURN_VALUE_USED(opline)) {
@@ -33083,7 +33083,7 @@ static int ZEND_FASTCALL  ZEND_ASSIGN_DIM_SPEC_CV_CONST_HANDLER(ZEND_OPCODE_HAND
 	ZEND_VM_INC_OPCODE();
 	ZEND_VM_NEXT_OPCODE();
 }
-
+/*$a=12 赋值语句的处理函数*/
 static int ZEND_FASTCALL  ZEND_ASSIGN_SPEC_CV_CONST_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
@@ -33092,8 +33092,8 @@ static int ZEND_FASTCALL  ZEND_ASSIGN_SPEC_CV_CONST_HANDLER(ZEND_OPCODE_HANDLER_
 	zval **variable_ptr_ptr;
 
 	SAVE_OPLINE();
-	value = opline->op2.zv;
-	variable_ptr_ptr = _get_zval_ptr_ptr_cv_BP_VAR_W(execute_data, opline->op1.var TSRMLS_CC);
+	value = opline->op2.zv; /*左值*/
+	variable_ptr_ptr = _get_zval_ptr_ptr_cv_BP_VAR_W(execute_data, opline->op1.var TSRMLS_CC); /*右值*/
 
 	if (IS_CV == IS_VAR && UNEXPECTED(variable_ptr_ptr == NULL)) {
 		if (zend_assign_to_string_offset(&EX_T(opline->op1.var), value, IS_CONST TSRMLS_CC)) {
@@ -33123,7 +33123,7 @@ static int ZEND_FASTCALL  ZEND_ASSIGN_SPEC_CV_CONST_HANDLER(ZEND_OPCODE_HANDLER_
 		} else if (IS_CONST == IS_CONST) {
 		 	value = zend_assign_const_to_variable(variable_ptr_ptr, value TSRMLS_CC);
 		} else {
-		 	value = zend_assign_to_variable(variable_ptr_ptr, value TSRMLS_CC);
+		 	value = zend_assign_to_variable(variable_ptr_ptr, value TSRMLS_CC); /*把value 复制到variable_ptr_ptr*/
 		}
 		if (RETURN_VALUE_USED(opline)) {
 			PZVAL_LOCK(value);
@@ -40540,7 +40540,7 @@ static int ZEND_FASTCALL  ZEND_ASSIGN_REF_SPEC_CV_CV_HANDLER(ZEND_OPCODE_HANDLER
 	zval **value_ptr_ptr;
 
 	SAVE_OPLINE();
-	value_ptr_ptr = _get_zval_ptr_ptr_cv_BP_VAR_W(execute_data, opline->op2.var TSRMLS_CC);
+	value_ptr_ptr = _get_zval_ptr_ptr_cv_BP_VAR_W(execute_data, opline->op3.var TSRMLS_CC); /*引用的值*/
 
 	if (IS_CV == IS_VAR &&
 	    value_ptr_ptr &&
@@ -41239,7 +41239,10 @@ static int ZEND_FASTCALL ZEND_NULL_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 	ZEND_VM_NEXT_OPCODE(); /* Never reached */
 }
 
-
+/*
+ * op操作数对应的处理函数名：
+ * ZEND_[opcode]_SPEC_(变量类型1)_(变量类型2)_HANDLER
+ */
 void zend_init_opcodes_handlers(void)
 {
   static const opcode_handler_t labels[] = {

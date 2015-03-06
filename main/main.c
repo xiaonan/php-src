@@ -1592,7 +1592,7 @@ int php_request_startup(TSRMLS_D)
 		/* We turn this off in php_execute_script() */
 		/* PG(during_request_startup) = 0; */
 
-		php_hash_environment(TSRMLS_C);
+		php_hash_environment(TSRMLS_C); //请求初始化$_GET, $_POST等
 		zend_activate_modules(TSRMLS_C);
 		PG(modules_activated)=1;
 	} zend_catch {

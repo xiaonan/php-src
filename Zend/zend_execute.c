@@ -448,7 +448,7 @@ static zend_always_inline zval **_get_zval_ptr_ptr_cv_BP_VAR_RW(const zend_execu
 
 static zend_always_inline zval **_get_zval_ptr_ptr_cv_BP_VAR_W(const zend_execute_data *execute_data, zend_uint var TSRMLS_DC)
 {
-	zval ***ptr = EX_CV_NUM(execute_data, var);
+	zval ***ptr = EX_CV_NUM(execute_data, var); //CV以数组的方式缓存变量所在HashTable的值,以取得对变量更快的访问速度
 
 	if (UNEXPECTED(*ptr == NULL)) {
 		return _get_zval_cv_lookup_BP_VAR_W(ptr, var TSRMLS_CC);
@@ -883,7 +883,7 @@ static inline zval* zend_assign_const_to_variable(zval **variable_ptr_ptr, zval 
 		return variable_ptr;
 	}
 }
-
+//赋值语句的实现
 static inline zval* zend_assign_to_variable(zval **variable_ptr_ptr, zval *value TSRMLS_DC)
 {
 	zval *variable_ptr = *variable_ptr_ptr;
@@ -900,7 +900,7 @@ static inline zval* zend_assign_to_variable(zval **variable_ptr_ptr, zval *value
 			if (UNEXPECTED(variable_ptr == value)) {
 				return variable_ptr;
 			} else if (EXPECTED(!PZVAL_IS_REF(value))) {
-				Z_ADDREF_P(value);
+				Z_ADDREF_P(value); /*引用计数添加*/
 				*variable_ptr_ptr = value;
 				ZEND_ASSERT(variable_ptr != &EG(uninitialized_zval));
 				GC_REMOVE_ZVAL_FROM_BUFFER(variable_ptr);
@@ -926,6 +926,7 @@ static inline zval* zend_assign_to_variable(zval **variable_ptr_ptr, zval *value
 			}
 		}
  	} else {
+        //当左值存在引用
 		if (EXPECTED(variable_ptr != value)) {
 copy_value:
 			if (EXPECTED(Z_TYPE_P(variable_ptr) <= IS_BOOL)) {
@@ -933,6 +934,7 @@ copy_value:
 				ZVAL_COPY_VALUE(variable_ptr, value);
 				zendi_zval_copy_ctor(*variable_ptr);
 			} else {
+                /*由于是引用，引用计数不变*/
 				ZVAL_COPY_VALUE(&garbage, variable_ptr);
 				ZVAL_COPY_VALUE(variable_ptr, value);
 				zendi_zval_copy_ctor(*variable_ptr);
@@ -1008,7 +1010,7 @@ static inline zval **zend_fetch_dimension_address_inner(HashTable *ht, const zva
 			goto fetch_string_dim;
 
 		case IS_STRING:
-
+            /*key为字符串时调用下面的函数增加bucket到hashTable*/
 			offset_key = dim->value.str.val;
 			offset_key_length = dim->value.str.len;
 
@@ -1067,7 +1069,7 @@ num_index:
 						zval *new_zval = &EG(uninitialized_zval);
 
 						Z_ADDREF_P(new_zval);
-						zend_hash_index_update(ht, hval, &new_zval, sizeof(zval *), (void **) &retval);
+						zend_hash_index_update(ht, hval, &new_zval, sizeof(zval *), (void **) &retval); /*对于数字下标的数组添加，执行这个函数*/
 					}
 					break;
 				}
@@ -1096,6 +1098,7 @@ static void zend_fetch_dimension_address(temp_variable *result, zval **container
 			}
 fetch_from_array:
 			if (dim == NULL) {
+                //if dim == NULL 没有输入key值，所以只需找下一个空闲值就行了
 				zval *new_zval = &EG(uninitialized_zval);
 
 				Z_ADDREF_P(new_zval);
@@ -1105,7 +1108,7 @@ fetch_from_array:
 					Z_DELREF_P(new_zval);
 				}
 			} else {
-				retval = zend_fetch_dimension_address_inner(Z_ARRVAL_P(container), dim, dim_type, type TSRMLS_CC);
+				retval = zend_fetch_dimension_address_inner(Z_ARRVAL_P(container), dim, dim_type, type TSRMLS_CC); //对于指定key的数组赋值，调用这个进行找槽位
 			}
 			result->var.ptr_ptr = retval;
 			PZVAL_LOCK(*retval);

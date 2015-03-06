@@ -696,8 +696,9 @@ static zend_bool php_auto_globals_create_request(const char *name, uint name_len
  */
 int php_hash_environment(TSRMLS_D)
 {
-	memset(PG(http_globals), 0, sizeof(PG(http_globals)));
-	zend_activate_auto_globals(TSRMLS_C);
+	memset(PG(http_globals), 0, sizeof(PG(http_globals))); //把所有的http_globals都赋值为0
+	zend_activate_auto_globals(TSRMLS_C); //重新设置http_globals的值
+    //处理url中的参数
 	if (PG(register_argc_argv)) {
 		php_build_argv(SG(request_info).query_string, PG(http_globals)[TRACK_VARS_SERVER] TSRMLS_CC);
 	}

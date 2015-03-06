@@ -175,7 +175,7 @@ static void print_hash(zend_write_func_t write_func, HashTable *ht, int indent, 
 			case HASH_KEY_IS_LONG:
 				{
 					char key[25];
-					snprintf(key, sizeof(key), "%ld", num_key);
+					snprintf(key, sizeof(key), "%ld", num_key); //key为数值的输出
 					ZEND_PUTS_EX(key);
 				}
 				break;

@@ -872,13 +872,16 @@ PHP_FUNCTION(next)
 		return;
 	}
 
+    //移动hashTable的pInternalPointer指针到下一个元素
 	zend_hash_move_forward(array);
 
 	if (return_value_used) {
+        //把当前元素的值赋值给entry
 		if (zend_hash_get_current_data(array, (void **) &entry) == FAILURE) {
 			RETURN_FALSE;
 		}
 
+        //返回entry的值
 		RETURN_ZVAL_FAST(*entry);
 	}
 }

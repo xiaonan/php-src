@@ -21,14 +21,14 @@
 
 #include "zend.h"
 #include "zend_globals.h"
-
+//每个index槽位的bucket维护一个双向链表, 后插入的在表头，先插入的在表尾
 #define CONNECT_TO_BUCKET_DLLIST(element, list_head)		\
 	(element)->pNext = (list_head);							\
 	(element)->pLast = NULL;								\
 	if ((element)->pNext) {									\
 		(element)->pNext->pLast = (element);				\
 	}
-
+//整个hashTable维护一个双向链表, 先插入的在表头，后插入的在表尾部，并且还有个头指针和为指针
 #define CONNECT_TO_GLOBAL_DLLIST(element, ht)				\
 	(element)->pListLast = (ht)->pListTail;					\
 	(ht)->pListTail = (element);							\
@@ -39,6 +39,7 @@
 	if (!(ht)->pListHead) {									\
 		(ht)->pListHead = (element);						\
 	}														\
+/*pInternalPointer 这个指针指向当前的bucket,使数组的next(), prev()等操作很快捷*/ \
 	if ((ht)->pInternalPointer == NULL) {					\
 		(ht)->pInternalPointer = (element);					\
 	}
@@ -103,16 +104,18 @@ ZEND_API ulong zend_hash_func(const char *arKey, uint nKeyLength)
 	return zend_inline_hash_func(arKey, nKeyLength);
 }
 
-
+//用于更新元素
 #define UPDATE_DATA(ht, p, pData, nDataSize)											\
 	if (nDataSize == sizeof(void*)) {													\
 		if ((p)->pData != &(p)->pDataPtr) {												\
 			pefree_rel((p)->pData, (ht)->persistent);									\
 		}																				\
+        /*当Bucket保存的是一个指针时，直接将该指针保存到pDataPtr中，然后再将pData指向pDataPtr */ \
 		memcpy(&(p)->pDataPtr, pData, sizeof(void *));									\
 		(p)->pData = &(p)->pDataPtr;													\
 	} else {																			\
 		if ((p)->pData == &(p)->pDataPtr) {												\
+            /*否则，将数据保存在pData指针指向的内存块中，然后设置pDataPtr为NULL。*/     \
 			(p)->pData = (void *) pemalloc_rel(nDataSize, (ht)->persistent);			\
 			(p)->pDataPtr=NULL;															\
 		} else {																		\
@@ -121,7 +124,7 @@ ZEND_API ulong zend_hash_func(const char *arKey, uint nKeyLength)
 		}																				\
 		memcpy((p)->pData, pData, nDataSize);											\
 	}
-
+//用于插入新元素
 #define INIT_DATA(ht, p, pData, nDataSize);								\
 	if (nDataSize == sizeof(void*)) {									\
 		memcpy(&(p)->pDataPtr, pData, sizeof(void *));					\
@@ -189,6 +192,19 @@ ZEND_API void zend_hash_set_apply_protection(HashTable *ht, zend_bool bApplyProt
 
 
 
+/**
+ * @Synopsis  hashTable插入或更新元素，当key为字符串时
+ *
+ * @Param ht
+ * @Param arKey 字符串key
+ * @Param nKeyLength
+ * @Param pData
+ * @Param nDataSize
+ * @Param pDest
+ * @Param ZEND_FILE_LINE_DC
+ *
+ * @Returns   
+ */
 ZEND_API int _zend_hash_add_or_update(HashTable *ht, const char *arKey, uint nKeyLength, void *pData, uint nDataSize, void **pDest, int flag ZEND_FILE_LINE_DC)
 {
 	ulong h;
@@ -204,7 +220,7 @@ ZEND_API int _zend_hash_add_or_update(HashTable *ht, const char *arKey, uint nKe
 
 	CHECK_INIT(ht);
 
-    //算出来hash key后需要根据hashTable的长度，把nIndex限制在这个长度内
+    //算出来hash key后需要根据hashTable的长度，把nIndex限制在这个长度内(通过nTableMask)
 	h = zend_inline_hash_func(arKey, nKeyLength);
 	nIndex = h & ht->nTableMask;
 
@@ -213,14 +229,17 @@ ZEND_API int _zend_hash_add_or_update(HashTable *ht, const char *arKey, uint nKe
         //if条件满足，表示要插入的key已经存在,覆盖原来的值
 		if (p->arKey == arKey ||
 			((p->h == h) && (p->nKeyLength == nKeyLength) && !memcmp(p->arKey, arKey, nKeyLength))) {
+            //如果key已经存在,并且是插入操作，失败退出
 				if (flag & HASH_ADD) {
 					return FAILURE;
 				}
 				ZEND_ASSERT(p->pData != pData);
 				HANDLE_BLOCK_INTERRUPTIONS();
+                /* 如果存在析构函数，则对原来的值进行析构操作 */
 				if (ht->pDestructor) {
 					ht->pDestructor(p->pData);
 				}
+                /* 更新数据 */
 				UPDATE_DATA(ht, p, pData, nDataSize);
 				if (pDest) {
 					*pDest = p->pData;
@@ -249,12 +268,14 @@ ZEND_API int _zend_hash_add_or_update(HashTable *ht, const char *arKey, uint nKe
 		*pDest = p->pData;
 	}
 
+    //修改时加锁
 	HANDLE_BLOCK_INTERRUPTIONS();
+    //把bucket加入到hashTable的双向链表
 	CONNECT_TO_GLOBAL_DLLIST(p, ht);
 	ht->arBuckets[nIndex] = p;
-	HANDLE_UNBLOCK_INTERRUPTIONS();
+	HANDLE_UNBLOCK_INTERRUPTIONS(); //去掉锁
 
-	ht->nNumOfElements++;
+	ht->nNumOfElements++; //表示hashTable中元素的个数
 	ZEND_HASH_IF_FULL_DO_RESIZE(ht);		/* If the Hash table is full, resize it */
 	return SUCCESS;
 }
@@ -336,6 +357,18 @@ ZEND_API int zend_hash_add_empty_element(HashTable *ht, const char *arKey, uint 
 }
 
 
+/**
+ * @Synopsis  hashTable增加或更新元素，key为数字时
+ *
+ * @Param ht
+ * @Param h 数字key
+ * @Param pData
+ * @Param nDataSize
+ * @Param pDest
+ * @Param ZEND_FILE_LINE_DC
+ *
+ * @Returns   
+ */
 ZEND_API int _zend_hash_index_update_or_next_insert(HashTable *ht, ulong h, void *pData, uint nDataSize, void **pDest, int flag ZEND_FILE_LINE_DC)
 {
 	uint nIndex;
@@ -347,6 +380,7 @@ ZEND_API int _zend_hash_index_update_or_next_insert(HashTable *ht, ulong h, void
 	IS_CONSISTENT(ht);
 	CHECK_INIT(ht);
 
+    /* 如果是新增元素(如$arr[] = 'hello'), 则使用nNextFreeElement值作为hash值,否则直接使用传入的key h 最为hash值 */
 	if (flag & HASH_NEXT_INSERT) {
 		h = ht->nNextFreeElement;
 	}
@@ -354,7 +388,9 @@ ZEND_API int _zend_hash_index_update_or_next_insert(HashTable *ht, ulong h, void
 
 	p = ht->arBuckets[nIndex];
 	while (p != NULL) {
+        /* 检查桶列中是否已存在相同数字索引的元素 */
 		if ((p->nKeyLength == 0) && (p->h == h)) {
+            /* 如果已存在相同索引的元素，并且为插入操作，则失败返回 */
 			if (flag & HASH_NEXT_INSERT || flag & HASH_ADD) {
 				return FAILURE;
 			}
@@ -365,6 +401,8 @@ ZEND_API int _zend_hash_index_update_or_next_insert(HashTable *ht, ulong h, void
 			}
 			UPDATE_DATA(ht, p, pData, nDataSize);
 			HANDLE_UNBLOCK_INTERRUPTIONS();
+            /* 如果新插入元素的数字索引大于哈希表的下一索引值，则调整nNextFreeElement的值 */
+            /* 注意，这个地方h可能溢出 是有符号的*/
 			if ((long)h >= (long)ht->nNextFreeElement) {
 				ht->nNextFreeElement = h < LONG_MAX ? h + 1 : LONG_MAX;
 			}
@@ -375,10 +413,11 @@ ZEND_API int _zend_hash_index_update_or_next_insert(HashTable *ht, ulong h, void
 		}
 		p = p->pNext;
 	}
+    //运行到这里，证明之前没有这个key, 需要重新申请一个节点空间，保存新的key值
 	p = (Bucket *) pemalloc_rel(sizeof(Bucket), ht->persistent);
 	p->arKey = NULL;
-	p->nKeyLength = 0; /* Numeric indices are marked by making the nKeyLength == 0 */
-	p->h = h;
+	p->nKeyLength = 0; /* Numeric indices are marked by making the nKeyLength == 0  保证数字索引的元素其nKeyLength成员值为0 */
+	p->h = h; /*把传入的数字下标赋值给p->h*/
 	INIT_DATA(ht, p, pData, nDataSize);
 	if (pDest) {
 		*pDest = p->pData;
@@ -390,7 +429,7 @@ ZEND_API int _zend_hash_index_update_or_next_insert(HashTable *ht, ulong h, void
 	ht->arBuckets[nIndex] = p;
 	CONNECT_TO_GLOBAL_DLLIST(p, ht);
 	HANDLE_UNBLOCK_INTERRUPTIONS();
-
+    /* 如果新插入元素的数字索引大于哈希表的下一索引值，则调整nNextFreeElement的值 */
 	if ((long)h >= (long)ht->nNextFreeElement) {
 		ht->nNextFreeElement = h < LONG_MAX ? h + 1 : LONG_MAX;
 	}
@@ -677,7 +716,7 @@ ZEND_API void zend_hash_apply(HashTable *ht, apply_func_t apply_func TSRMLS_DC)
 	p = ht->pListHead;
 	while (p != NULL) {
 		int result = apply_func(p->pData TSRMLS_CC);
-		
+        //如果满足删除的要求，则从hashTable中删除
 		if (result & ZEND_HASH_APPLY_REMOVE) {
 			p = zend_hash_apply_deleter(ht, p);
 		} else {
@@ -1068,7 +1107,7 @@ ZEND_API void zend_hash_internal_pointer_end_ex(HashTable *ht, HashPosition *pos
 		ht->pInternalPointer = ht->pListTail;
 }
 
-
+//把pInternalPointer指针向下一个元素移动
 ZEND_API int zend_hash_move_forward_ex(HashTable *ht, HashPosition *pos)
 {
 	HashPosition *current = pos ? pos : &ht->pInternalPointer;
@@ -1110,14 +1149,14 @@ ZEND_API int zend_hash_get_current_key_ex(const HashTable *ht, char **str_index,
 			if (duplicate) {
 				*str_index = estrndup(p->arKey, p->nKeyLength - 1);
 			} else {
-				*str_index = (char*)p->arKey;
+				*str_index = (char*)p->arKey; //对于string的key，把arKey复制过来
 			}
 			if (str_length) {
 				*str_length = p->nKeyLength;
 			}
 			return HASH_KEY_IS_STRING;
 		} else {
-			*num_index = p->h;
+			*num_index = p->h; //把bucket的h字段复制给num_index用于前端的展现
 			return HASH_KEY_IS_LONG;
 		}
 	}
@@ -1161,7 +1200,7 @@ ZEND_API int zend_hash_get_current_key_type_ex(HashTable *ht, HashPosition *pos)
 	return HASH_KEY_NON_EXISTENT;
 }
 
-
+//把当前元素（pInternalPointer指针指向的元素)的值赋值给参数*pData
 ZEND_API int zend_hash_get_current_data_ex(HashTable *ht, void **pData, HashPosition *pos)
 {
 	Bucket *p;

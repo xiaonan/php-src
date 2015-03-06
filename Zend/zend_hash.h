@@ -53,7 +53,7 @@ typedef void (*copy_ctor_param_func_t)(void *pElement, void *pParam);
 struct _hashtable;
 
 typedef struct bucket {
-	ulong h;						/* Used for numeric indexing */ /*对char *key进行hash后的值，或者是用户指定的数字索引值*/
+	ulong h;						/* Used for numeric indexing */ /*对char *key进行hash后的值，或者是用户指定的数字索引值，可能会溢出*/
 	uint nKeyLength; /*hash关键字的长度，如果数组索引为数字，此值为0*/
 	void *pData; /*指向value,一般是用户数据的副本，如果是指针数据，则指向pDataPtr*/
 	void *pDataPtr; /*如果是指针数据，此值会指向真正的value,同时上面pData会指向此值*/
@@ -69,7 +69,7 @@ typedef struct _hashtable {
 	uint nTableMask; /*nTableSize-1, 索引取值的优化*/
 	uint nNumOfElements; /*hash Bucket中当前存在的元素个数， count()函数会直接返回此值*/
 	ulong nNextFreeElement; /*下一个数字索引的位置*/
-	Bucket *pInternalPointer;	/* Used for element traversal ,当前遍历的指针，foreach比for快的原因之一*/
+	Bucket *pInternalPointer;	/* Used for element traversal ,当前遍历的指针，foreach比for快的原因之一,这个指针指向当前激活的元素*/
 	Bucket *pListHead; /*存储数组头元素指针*/
 	Bucket *pListTail; /*存储数组尾元素指针*/
 	Bucket **arBuckets; /*存储hash数组*/
@@ -105,6 +105,8 @@ ZEND_API void zend_hash_clean(HashTable *ht);
 #define zend_hash_init_ex(ht, nSize, pHashFunction, pDestructor, persistent, bApplyProtection)		_zend_hash_init_ex((ht), (nSize), (pDestructor), (persistent), (bApplyProtection) ZEND_FILE_LINE_CC)
 
 /* additions/updates/changes */
+/*hastTable新增或更新元素，根据key的类型可分为两种情况，第一种是key是字符串，第二种是key是数字*/
+/*下面这个是key为字符串时*/
 ZEND_API int _zend_hash_add_or_update(HashTable *ht, const char *arKey, uint nKeyLength, void *pData, uint nDataSize, void **pDest, int flag ZEND_FILE_LINE_DC);
 #define zend_hash_update(ht, arKey, nKeyLength, pData, nDataSize, pDest) \
 		_zend_hash_add_or_update(ht, arKey, nKeyLength, pData, nDataSize, pDest, HASH_UPDATE ZEND_FILE_LINE_CC)
@@ -117,6 +119,7 @@ ZEND_API int _zend_hash_quick_add_or_update(HashTable *ht, const char *arKey, ui
 #define zend_hash_quick_add(ht, arKey, nKeyLength, h, pData, nDataSize, pDest) \
 		_zend_hash_quick_add_or_update(ht, arKey, nKeyLength, h, pData, nDataSize, pDest, HASH_ADD ZEND_FILE_LINE_CC)
 
+/*下面这个是key为数字时*/
 ZEND_API int _zend_hash_index_update_or_next_insert(HashTable *ht, ulong h, void *pData, uint nDataSize, void **pDest, int flag ZEND_FILE_LINE_DC);
 #define zend_hash_index_update(ht, h, pData, nDataSize, pDest) \
 		_zend_hash_index_update_or_next_insert(ht, h, pData, nDataSize, pDest, HASH_UPDATE ZEND_FILE_LINE_CC)

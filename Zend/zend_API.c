@@ -726,6 +726,7 @@ ZEND_API int zend_parse_parameter(int flags, int arg_num TSRMLS_DC, zval **arg, 
 	return ret;
 }
 
+//处理可变函数的参数
 static int zend_parse_va_args(int num_args, const char *type_spec, va_list *va, int flags TSRMLS_DC) /* {{{ */
 {
 	const  char *spec_walk;
@@ -912,17 +913,21 @@ ZEND_API int zend_parse_parameters_ex(int flags, int num_args TSRMLS_DC, const c
 	return retval;
 }
 /* }}} */
-
+//C语言：可变参数函数
+//这里的第一个参数有两个类型，是什么意思？根据TSRMLS_DC的定义，应该是", TSRMLS_D" = ", void ***tsrm_ls
+//所有函数生命相当于: ZEND_API int zend_parse_parameters(int num_args , void ***tsrm_ls , const char *type_spec, ...) /* {{{ */
+//这里tsrm_ls是线程安全的， 参见：http://www.laruence.com/2008/08/03/201.html
+//在这里的效果就是把num_args从global变成线程安全的，也就是独立copy一份
 ZEND_API int zend_parse_parameters(int num_args TSRMLS_DC, const char *type_spec, ...) /* {{{ */
 {
-	va_list va;
+	va_list va; //声明用户存放参数的变量
 	int retval;
 
 	RETURN_IF_ZERO_ARGS(num_args, type_spec, 0);
 
-	va_start(va, type_spec);
+	va_start(va, type_spec); //把va初始化为参数列表,这时va就是...所表示的所有参数的列表
 	retval = zend_parse_va_args(num_args, type_spec, &va, 0 TSRMLS_CC);
-	va_end(va);
+	va_end(va); //清理工作
 
 	return retval;
 }

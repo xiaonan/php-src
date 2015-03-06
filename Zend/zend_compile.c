@@ -919,7 +919,7 @@ static zend_bool opline_is_fetch_this(const zend_op *opline TSRMLS_DC) /* {{{ */
 	}
 }
 /* }}} */
-
+/*变量的赋值*/
 void zend_do_assign(znode *result, znode *variable, znode *value TSRMLS_DC) /* {{{ */
 {
 	int last_op_number;
@@ -6810,7 +6810,7 @@ zend_bool zend_is_auto_global(const char *name, uint name_len TSRMLS_DC) /* {{{ 
 	return zend_is_auto_global_quick(name, name_len, zend_hash_func(name, name_len+1) TSRMLS_CC);
 }
 /* }}} */
-
+//注册GET等函数处理的callback的函数
 int zend_register_auto_global(const char *name, uint name_len, zend_bool jit, zend_auto_global_callback auto_global_callback TSRMLS_DC) /* {{{ */
 {
 	zend_auto_global auto_global;
@@ -6826,6 +6826,8 @@ int zend_register_auto_global(const char *name, uint name_len, zend_bool jit, ze
 
 static int zend_auto_global_init(zend_auto_global *auto_global TSRMLS_DC) /* {{{ */
 {
+    //auto_global_callback 根据方法的不同选择不同的函数，入GET方法，选择的函数是php_auto_globals_create_get
+    //根据这个callback获取请求初始化时的GET值
 	if (auto_global->jit) {
 		auto_global->armed = 1;
 	} else if (auto_global->auto_global_callback) {

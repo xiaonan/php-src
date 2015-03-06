@@ -655,9 +655,10 @@ ZEND_FUNCTION(define)
 	zval *val;
 	zval *val_free = NULL;
 	zend_bool non_cs = 0;
-	int case_sensitive = CONST_CS;
+	int case_sensitive = CONST_CS; //表示拥护定义的常量，非持久化的，在RINIT_SHUTDOWN阶段会被释放， 系统常量一般为CONST_PERSISTENT，表示持久性常量，在MINIT_SHUTDOWN阶段才会释放
 	zend_constant c;
 
+    //参数处理
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sz|b", &name, &name_len, &val, &non_cs) == FAILURE) {
 		return;
 	}
@@ -671,7 +672,7 @@ ZEND_FUNCTION(define)
 		zend_error(E_WARNING, "Class constants cannot be defined or redefined");
 		RETURN_FALSE;
 	}
-
+//object类型需要单独处理
 repeat:
 	switch (Z_TYPE_P(val)) {
 		case IS_LONG:

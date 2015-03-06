@@ -20,7 +20,7 @@
 
 #ifndef ZEND_VM_OPCODES_H
 #define ZEND_VM_OPCODES_H
-
+/*操作数命名*/
 ZEND_API const char *zend_get_opcode_name(zend_uchar opcode);
 
 #define ZEND_NOP                               0

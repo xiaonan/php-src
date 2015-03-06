@@ -82,7 +82,7 @@ typedef union _znode_op {
 	zend_ulong     hash;
 	zend_uint      opline_num; /*  Needs to be signed */
 	zend_op       *jmp_addr;
-	zval          *zv;
+	zval          *zv; //操作数的值
 	zend_literal  *literal;
 	void          *ptr;        /* Used for passing pointers from the compile to execution phase, currently used for traits */
 } znode_op;
@@ -109,13 +109,13 @@ typedef int (ZEND_FASTCALL *opcode_handler_t) (ZEND_OPCODE_HANDLER_ARGS);
 extern ZEND_API opcode_handler_t *zend_opcode_handlers;
 
 struct _zend_op {
-	opcode_handler_t handler;
-	znode_op op1;
-	znode_op op2;
+	opcode_handler_t handler; //执行opcode时调用的处理函数
+	znode_op op1; //操作数1
+	znode_op op2; //操作数2
 	znode_op result;
 	ulong extended_value;
 	uint lineno;
-	zend_uchar opcode;
+	zend_uchar opcode; //opcode代码
 	zend_uchar op1_type;
 	zend_uchar op2_type;
 	zend_uchar result_type;
@@ -415,9 +415,9 @@ struct _zend_execute_data {
 #define EX_CV_NUM(ex, n)       (((zval***)(((char*)(ex))+ZEND_MM_ALIGNED_SIZE(sizeof(zend_execute_data))))+(n))
 
 
-#define IS_CONST	(1<<0)
-#define IS_TMP_VAR	(1<<1)
-#define IS_VAR		(1<<2)
+#define IS_CONST	(1<<0) /*常量*/
+#define IS_TMP_VAR	(1<<1) /*临时变量*/
+#define IS_VAR		(1<<2) /*变量*/
 #define IS_UNUSED	(1<<3)	/* Unused variable */
 #define IS_CV		(1<<4)	/* Compiled variable */
 
