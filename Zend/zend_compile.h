@@ -231,15 +231,15 @@ typedef struct _zend_property_info {
 	zend_class_entry *ce;
 } zend_property_info;
 
-
+//函数参数结构
 typedef struct _zend_arg_info {
-	const char *name;
-	zend_uint name_len;
-	const char *class_name;
-	zend_uint class_name_len;
-	zend_uchar type_hint;
-	zend_uchar pass_by_reference;
-	zend_bool allow_null;
+	const char *name; //参数名
+	zend_uint name_len; //参数名称长度
+	const char *class_name; //类名
+	zend_uint class_name_len; //类名长度
+	zend_uchar type_hint; //数组类型提示
+	zend_uchar pass_by_reference;  //是否引用传递
+	zend_bool allow_null; //是否允许为NULL
 	zend_bool is_variadic;
 } zend_arg_info;
 
@@ -321,6 +321,7 @@ struct _zend_op_array {
 #define ZEND_RETURN_VALUE				0
 #define ZEND_RETURN_REFERENCE			1
 
+//内部函数的结构
 typedef struct _zend_internal_function {
 	/* Common elements */
 	zend_uchar type;
@@ -333,28 +334,31 @@ typedef struct _zend_internal_function {
 	zend_arg_info *arg_info;
 	/* END of common elements */
 
-	void (*handler)(INTERNAL_FUNCTION_PARAMETERS);
-	struct _zend_module_entry *module;
+	void (*handler)(INTERNAL_FUNCTION_PARAMETERS); //指向内核函数
+	struct _zend_module_entry *module; //函数所属的模块名字
 } zend_internal_function;
 
 #define ZEND_FN_SCOPE_NAME(function)  ((function) && (function)->common.scope ? (function)->common.scope->name : "")
 
+/*函数联合体*/
 typedef union _zend_function {
-	zend_uchar type;	/* MUST be the first element of this struct! */
+	zend_uchar type;	/* 如用户自定义则为 #define ZEND_USER_FUNCTION 2 
+                           MUST be the first element of this struct! */
 
+    //用户自定义函数
 	struct {
 		zend_uchar type;  /* never used */
-		const char *function_name;
-		zend_class_entry *scope;
-		zend_uint fn_flags;
-		union _zend_function *prototype;
-		zend_uint num_args;
-		zend_uint required_num_args;
-		zend_arg_info *arg_info;
+		const char *function_name; //函数名
+		zend_class_entry *scope; //函数所在的类作用域
+		zend_uint fn_flags; //作为方法时访问类型等，如ZEND_ACC_STATIC等
+		union _zend_function *prototype; //函数原型
+		zend_uint num_args; //函数参数个数
+		zend_uint required_num_args; //需要的参数数目
+		zend_arg_info *arg_info; //返回值
 	} common;
 
-	zend_op_array op_array;
-	zend_internal_function internal_function;
+	zend_op_array op_array; //函数中的操作 按照opline一条一条顺序执行
+	zend_internal_function internal_function; //内核函数
 } zend_function;
 
 
@@ -393,7 +397,7 @@ struct _zend_execute_data {
 	zend_function_state function_state;
 	zend_op_array *op_array;
 	zval *object;
-	HashTable *symbol_table;
+	HashTable *symbol_table; /*函数内部局部变量*/
 	struct _zend_execute_data *prev_execute_data;
 	zval *old_error_reporting;
 	zend_bool nested;
@@ -774,9 +778,9 @@ int zend_add_literal(zend_op_array *op_array, const zval *zv TSRMLS_DC);
 #define BP_VAR_FUNC_ARG		5
 #define BP_VAR_UNSET		6
 
-
-#define ZEND_INTERNAL_FUNCTION				1
-#define ZEND_USER_FUNCTION					2
+/*PHP函数分类*/
+#define ZEND_INTERNAL_FUNCTION				1 //内置函数
+#define ZEND_USER_FUNCTION					2 //用户函数
 #define ZEND_OVERLOADED_FUNCTION			3
 #define	ZEND_EVAL_CODE						4
 #define ZEND_OVERLOADED_FUNCTION_TEMPORARY	5

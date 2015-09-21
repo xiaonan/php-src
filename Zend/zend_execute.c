@@ -767,7 +767,7 @@ static inline void zend_assign_to_object(zval **retval, zval **object_ptr, zval 
 	zval_ptr_dtor(&value);
 	FREE_OP_IF_VAR(free_value);
 }
-
+//变量赋值，根据value的类型赋值
 static inline int zend_assign_to_string_offset(const temp_variable *T, const zval *value, int value_type TSRMLS_DC)
 {
 	zval *str = T->str_offset.str;

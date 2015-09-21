@@ -655,7 +655,7 @@ ZEND_FUNCTION(define)
 	zval *val;
 	zval *val_free = NULL;
 	zend_bool non_cs = 0;
-	int case_sensitive = CONST_CS; //表示拥护定义的常量，非持久化的，在RINIT_SHUTDOWN阶段会被释放， 系统常量一般为CONST_PERSISTENT，表示持久性常量，在MINIT_SHUTDOWN阶段才会释放
+	int case_sensitive = CONST_CS; //表示用户定义的常量，非持久化的，在RINIT_SHUTDOWN阶段会被释放， 系统常量一般为CONST_PERSISTENT，表示持久性常量，在MINIT_SHUTDOWN阶段才会释放
 	zend_constant c;
 
     //参数处理

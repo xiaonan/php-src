@@ -2700,7 +2700,7 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_version_compare, 0, 0, 2)
 ZEND_END_ARG_INFO()
 /* }}} */
 /* }}} */
-
+//PHP内部函数实现
 const zend_function_entry basic_functions[] = { /* {{{ */
 	PHP_FE(constant,														arginfo_constant)
 	PHP_FE(bin2hex,															arginfo_bin2hex)
@@ -3403,13 +3403,13 @@ static const zend_module_dep standard_deps[] = { /* {{{ */
 	ZEND_MOD_END
 };
 /* }}} */
-
+//PHP内部函数声明周期
 zend_module_entry basic_functions_module = { /* {{{ */
 	STANDARD_MODULE_HEADER_EX,
 	NULL,
 	standard_deps,
 	"standard",					/* extension name */
-	basic_functions,			/* function list */
+	basic_functions,			/* function list */ //内部函数列表
 	PHP_MINIT(basic),			/* process startup */
 	PHP_MSHUTDOWN(basic),		/* process shutdown */
 	PHP_RINIT(basic),			/* request startup */

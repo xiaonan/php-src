@@ -70,6 +70,7 @@ struct _zend_ini_entry;
 typedef struct _zend_module_entry zend_module_entry;
 typedef struct _zend_module_dep zend_module_dep;
 
+//扩展模块的结构
 struct _zend_module_entry {
 	unsigned short size;
 	unsigned int zend_api;
@@ -77,14 +78,14 @@ struct _zend_module_entry {
 	unsigned char zts;
 	const struct _zend_ini_entry *ini_entry;
 	const struct _zend_module_dep *deps;
-	const char *name;
-	const struct _zend_function_entry *functions;
-	int (*module_startup_func)(INIT_FUNC_ARGS);
-	int (*module_shutdown_func)(SHUTDOWN_FUNC_ARGS);
-	int (*request_startup_func)(INIT_FUNC_ARGS);
-	int (*request_shutdown_func)(SHUTDOWN_FUNC_ARGS);
-	void (*info_func)(ZEND_MODULE_INFO_FUNC_ARGS);
-	const char *version;
+	const char *name; //扩展模块名
+	const struct _zend_function_entry *functions; //扩展模块函数的引用
+	int (*module_startup_func)(INIT_FUNC_ARGS); //扩展模块加载时调用
+	int (*module_shutdown_func)(SHUTDOWN_FUNC_ARGS); //扩展模块卸载时用
+	int (*request_startup_func)(INIT_FUNC_ARGS); //每个请求开始时调用
+	int (*request_shutdown_func)(SHUTDOWN_FUNC_ARGS); //每个请求结束时调用
+	void (*info_func)(ZEND_MODULE_INFO_FUNC_ARGS); //函数指针，在phpinfo() 时被调用,用于显示自定义模块信息
+	const char *version; //模块版本
 	size_t globals_size;
 #ifdef ZTS
 	ts_rsrc_id* globals_id_ptr;

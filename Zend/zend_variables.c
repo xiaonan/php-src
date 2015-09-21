@@ -203,22 +203,28 @@ ZEND_API int zval_copy_static_var(zval **p TSRMLS_DC, int num_args, va_list args
 	zend_bool is_ref;
 	zval *tmp;
   
+    // 只对通过use语句类型的静态变量进行取值操作, 否则匿名函数体内的静态变量也会影响到作 用域之外的变量
 	if (Z_TYPE_PP(p) & (IS_LEXICAL_VAR|IS_LEXICAL_REF)) {
 		is_ref = Z_TYPE_PP(p) & IS_LEXICAL_REF;
     
 		if (!EG(active_symbol_table)) {
 			zend_rebuild_symbol_table(TSRMLS_C);
 		}
+        // 如果当前作用域内没有这个变量
 		if (zend_hash_quick_find(EG(active_symbol_table), key->arKey, key->nKeyLength, key->h, (void **) &p) == FAILURE) {
 			if (is_ref) {        
+                // 如果是引用变量, 则创建一个临时变量以便在匿名函数定义之后对该变量进行操作
+
 				ALLOC_INIT_ZVAL(tmp);
 				Z_SET_ISREF_P(tmp);
 				zend_hash_quick_add(EG(active_symbol_table), key->arKey, key->nKeyLength, key->h, &tmp, sizeof(zval*), (void**)&p);
 			} else {
+                //如果不是引用则表示这个变量不存在
 				tmp = EG(uninitialized_zval_ptr);
 				zend_error(E_NOTICE,"Undefined variable: %s", key->arKey);
 			}
 		} else {
+            // 如果存在这个变量, 则根据是否是引用, 对变量进行引用或者复制
 			if (is_ref) {
 				SEPARATE_ZVAL_TO_MAKE_IS_REF(p);
 				tmp = *p;

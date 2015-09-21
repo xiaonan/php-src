@@ -437,7 +437,7 @@ static int ZEND_FASTCALL zend_leave_helper_SPEC(ZEND_OPCODE_HANDLER_ARGS)
 			if (EG(active_symbol_table)) {
 				zend_clean_and_cache_symbol_table(EG(active_symbol_table) TSRMLS_CC);
 			}
-			EG(active_symbol_table) = EX(symbol_table);
+			EG(active_symbol_table) = EX(symbol_table); /*全局函数局部变量指向当前执行的函数的局部变量*/
 
 			EX(function_state).function = (zend_function *) EX(op_array);
 			EX(function_state).arguments = NULL;
@@ -475,7 +475,7 @@ static int ZEND_FASTCALL zend_leave_helper_SPEC(ZEND_OPCODE_HANDLER_ARGS)
 	}
 	ZEND_VM_RETURN();
 }
-
+//处理函数调用，判断是内部函数还是用户自定义函数
 static int ZEND_FASTCALL zend_do_fcall_common_helper_SPEC(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
@@ -516,7 +516,7 @@ static int ZEND_FASTCALL zend_do_fcall_common_helper_SPEC(ZEND_OPCODE_HANDLER_AR
 		}
 	}
 
-	if (fbc->type == ZEND_USER_FUNCTION || fbc->common.scope) {
+	if (fbc->type == ZEND_USER_FUNCTION || fbc->common.scope) { //用户自定义函数
 		should_change_scope = 1;
 		EX(current_this) = EG(This);
 		EX(current_scope) = EG(scope);
@@ -535,7 +535,7 @@ static int ZEND_FASTCALL zend_do_fcall_common_helper_SPEC(ZEND_OPCODE_HANDLER_AR
 	}
 	LOAD_OPLINE();
 
-	if (fbc->type == ZEND_INTERNAL_FUNCTION) {
+	if (fbc->type == ZEND_INTERNAL_FUNCTION) {  //内部函数
 		if (fbc->common.fn_flags & ZEND_ACC_HAS_TYPE_HINTS) {
 			zend_uint i;
 			void **p = EX(function_state).arguments - num_args;
@@ -554,6 +554,7 @@ static int ZEND_FASTCALL zend_do_fcall_common_helper_SPEC(ZEND_OPCODE_HANDLER_AR
 			ret->var.fcall_returned_reference = (fbc->common.fn_flags & ZEND_ACC_RETURN_REFERENCE) != 0;
 
 			if (!zend_execute_internal) {
+                //内部函数的调用
 				/* saves one function call if zend_execute_internal is not used */
 				fbc->internal_function.handler(num_args, ret->var.ptr, &ret->var.ptr, EX(object), RETURN_VALUE_USED(opline) TSRMLS_CC);
 			} else {
@@ -2558,7 +2559,7 @@ static int ZEND_FASTCALL  ZEND_JMPNZ_EX_SPEC_CONST_HANDLER(ZEND_OPCODE_HANDLER_A
 	}
 	ZEND_VM_NEXT_OPCODE();
 }
-
+//用户自定义函数执行
 static int ZEND_FASTCALL  ZEND_DO_FCALL_SPEC_CONST_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
@@ -6782,6 +6783,7 @@ static int ZEND_FASTCALL  ZEND_ISSET_ISEMPTY_VAR_SPEC_CONST_UNUSED_HANDLER(ZEND_
 	ZEND_VM_NEXT_OPCODE();
 }
 
+//匿名函数的定义
 static int ZEND_FASTCALL  ZEND_DECLARE_LAMBDA_FUNCTION_SPEC_CONST_UNUSED_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
@@ -6794,6 +6796,7 @@ static int ZEND_FASTCALL  ZEND_DECLARE_LAMBDA_FUNCTION_SPEC_CONST_UNUSED_HANDLER
 		zend_error_noreturn(E_ERROR, "Base lambda function for closure not found");
 	}
 
+    //创建匿名函数
 	zend_create_closure(&EX_T(opline->result.var).tmp_var, (zend_function *) op_array, EG(scope), EG(This) TSRMLS_CC);
 
 	CHECK_EXCEPTION();
@@ -33096,7 +33099,7 @@ static int ZEND_FASTCALL  ZEND_ASSIGN_SPEC_CV_CONST_HANDLER(ZEND_OPCODE_HANDLER_
 	variable_ptr_ptr = _get_zval_ptr_ptr_cv_BP_VAR_W(execute_data, opline->op1.var TSRMLS_CC); /*右值*/
 
 	if (IS_CV == IS_VAR && UNEXPECTED(variable_ptr_ptr == NULL)) {
-		if (zend_assign_to_string_offset(&EX_T(opline->op1.var), value, IS_CONST TSRMLS_CC)) {
+		if (zend_assign_to_string_offset(&EX_T(opline->op1.var), value, IS_CONST TSRMLS_CC)) { /* val赋值給变量 */
 			if (RETURN_VALUE_USED(opline)) {
 				zval *retval;
 

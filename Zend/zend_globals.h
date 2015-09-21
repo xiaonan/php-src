@@ -164,7 +164,7 @@ struct _zend_compiler_globals {
 #endif
 };
 
-
+/*保存运行时变量*/
 struct _zend_executor_globals {
 	zval **return_value_ptr_ptr;
 
@@ -181,8 +181,8 @@ struct _zend_executor_globals {
 
 	zend_op **opline_ptr;
 
-	HashTable *active_symbol_table;
-	HashTable symbol_table;		/* main symbol table */
+	HashTable *active_symbol_table; /*局部变量指针，当函数运行时指向函数的局部变量hashtable*/
+	HashTable symbol_table;		/* main symbol table 全局变量 */
 
 	HashTable included_files;	/* files already included */
 

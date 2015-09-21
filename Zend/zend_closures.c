@@ -450,7 +450,7 @@ ZEND_API void zend_create_closure(zval *res, zend_function *func, zend_class_ent
 		scope = zend_ce_closure;
 	}
 
-	if (closure->func.type == ZEND_USER_FUNCTION) {
+	if (closure->func.type == ZEND_USER_FUNCTION) { //用户定义的匿名函数
 		if (closure->func.op_array.static_variables) {
 			HashTable *static_variables = closure->func.op_array.static_variables;
 

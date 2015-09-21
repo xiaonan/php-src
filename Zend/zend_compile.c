@@ -1690,7 +1690,7 @@ void zend_do_begin_function_declaration(znode *function_token, znode *function_n
 
 		str_efree(lcname);
 	} else {
-		zend_op *opline = get_next_op(CG(active_op_array) TSRMLS_CC);
+		zend_op *opline = get_next_op(CG(active_op_array) TSRMLS_CC); //获取操作数
 		zval key;
 		zval **ns_name;
 
@@ -1703,7 +1703,7 @@ void zend_do_begin_function_declaration(znode *function_token, znode *function_n
 			zend_do_build_namespace_name(&tmp, &tmp, function_name TSRMLS_CC);
 			op_array.function_name = Z_STRVAL(tmp.u.constant);
 			name_len = Z_STRLEN(tmp.u.constant);
-			lcname = zend_str_tolower_dup(Z_STRVAL(tmp.u.constant), name_len);
+			lcname = zend_str_tolower_dup(Z_STRVAL(tmp.u.constant), name_len); //函数名不区分大小写
 		} else {
 			lcname = zend_str_tolower_dup(name, name_len);
 		}
@@ -1844,7 +1844,7 @@ void zend_do_end_function_declaration(const znode *function_token TSRMLS_DC) /* 
 	zend_stack_del_top(&CG(foreach_copy_stack));
 }
 /* }}} */
-
+//处理函数接受的参数
 void zend_do_receive_param(zend_uchar op, znode *varname, const znode *initialization, znode *class_type, zend_uchar pass_by_reference, zend_bool is_variadic TSRMLS_DC) /* {{{ */
 {
 	zend_op *opline;
@@ -1883,7 +1883,7 @@ void zend_do_receive_param(zend_uchar op, znode *varname, const znode *initializ
 	}
 
 	opline = get_next_op(CG(active_op_array) TSRMLS_CC);
-	CG(active_op_array)->num_args++;
+	CG(active_op_array)->num_args++; //每处理一个参数就++
 	opline->opcode = op;
 	SET_NODE(opline->result, &var);
 	opline->op1_type = IS_UNUSED;
@@ -1896,8 +1896,9 @@ void zend_do_receive_param(zend_uchar op, znode *varname, const znode *initializ
 			CG(active_op_array)->required_num_args = CG(active_op_array)->num_args;
 		}
 	}
+    //函数参数检查的关键代码
 	CG(active_op_array)->arg_info = erealloc(CG(active_op_array)->arg_info, sizeof(zend_arg_info)*(CG(active_op_array)->num_args));
-	cur_arg_info = &CG(active_op_array)->arg_info[CG(active_op_array)->num_args-1];
+	cur_arg_info = &CG(active_op_array)->arg_info[CG(active_op_array)->num_args-1]; //最后一个就是现在要处理的参数
 	cur_arg_info->name = zend_new_interned_string(estrndup(Z_STRVAL(varname->u.constant), Z_STRLEN(varname->u.constant)), Z_STRLEN(varname->u.constant) + 1, 1 TSRMLS_CC);
 	cur_arg_info->name_len = Z_STRLEN(varname->u.constant);
 	cur_arg_info->type_hint = 0;
