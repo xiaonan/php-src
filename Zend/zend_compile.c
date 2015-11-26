@@ -1848,7 +1848,7 @@ void zend_do_end_function_declaration(const znode *function_token TSRMLS_DC) /* 
 void zend_do_receive_param(zend_uchar op, znode *varname, const znode *initialization, znode *class_type, zend_uchar pass_by_reference, zend_bool is_variadic TSRMLS_DC) /* {{{ */
 {
 	zend_op *opline;
-	zend_arg_info *cur_arg_info;
+	zend_arg_info *cur_arg_info; //当前参数
 	znode var;
 
 	if (zend_is_auto_global(Z_STRVAL(varname->u.constant), Z_STRLEN(varname->u.constant) TSRMLS_CC)) {
@@ -5051,6 +5051,7 @@ void zend_do_default_before_statement(const znode *case_list, znode *default_tok
 }
 /* }}} */
 
+//类初始化
 void zend_do_begin_class_declaration(const znode *class_token, znode *class_name, const znode *parent_class_name TSRMLS_DC) /* {{{ */
 {
 	zend_op *opline;
@@ -5106,7 +5107,7 @@ void zend_do_begin_class_declaration(const znode *class_token, znode *class_name
 	new_class_entry->name = zend_new_interned_string(Z_STRVAL(class_name->u.constant), Z_STRLEN(class_name->u.constant) + 1, 1 TSRMLS_CC);
 	new_class_entry->name_length = Z_STRLEN(class_name->u.constant);
 
-	zend_initialize_class_data(new_class_entry, 1 TSRMLS_CC);
+	zend_initialize_class_data(new_class_entry, 1 TSRMLS_CC); //初始化类数据
 	new_class_entry->info.user.filename = zend_get_compiled_filename(TSRMLS_C);
 	new_class_entry->info.user.line_start = class_token->u.op.opline_num;
 	new_class_entry->ce_flags |= class_token->EA;
@@ -5367,6 +5368,7 @@ ZEND_API int zend_unmangle_property_name_ex(const char *mangled_property, int le
 }
 /* }}} */
 
+//初始化开始
 void zend_do_declare_property(const znode *var_name, const znode *value, zend_uint access_type TSRMLS_DC) /* {{{ */
 {
 	zval *property;
@@ -5382,7 +5384,7 @@ void zend_do_declare_property(const znode *var_name, const znode *value, zend_ui
 		zend_error_noreturn(E_COMPILE_ERROR, "Properties cannot be declared abstract");
 	}
 
-	if (access_type & ZEND_ACC_FINAL) {
+	if (access_type & ZEND_ACC_FINAL) { //不能是final类型变量
 		zend_error_noreturn(E_COMPILE_ERROR, "Cannot declare property %s::$%s final, the final modifier is allowed only for methods and classes",
 				   CG(active_class_entry)->name, Z_STRVAL(var_name->u.constant));
 	}
@@ -5390,9 +5392,9 @@ void zend_do_declare_property(const znode *var_name, const znode *value, zend_ui
 	if (zend_hash_find(&CG(active_class_entry)->properties_info, Z_STRVAL(var_name->u.constant), Z_STRLEN(var_name->u.constant)+1, (void **) &existing_property_info)==SUCCESS) {
 		zend_error_noreturn(E_COMPILE_ERROR, "Cannot redeclare %s::$%s", CG(active_class_entry)->name, Z_STRVAL(var_name->u.constant));
 	}
-	ALLOC_ZVAL(property);
+	ALLOC_ZVAL(property); //分配内存
 
-	if (value) {
+	if (value) { //成员变量有初始化数据
 		*property = value->u.constant;
 	} else {
 		INIT_PZVAL(property);
@@ -5406,6 +5408,7 @@ void zend_do_declare_property(const znode *var_name, const znode *value, zend_ui
 		CG(doc_comment_len) = 0;
 	}
 
+    //将成员变量添加到指定的类结构中
 	zend_declare_property_ex(CG(active_class_entry), zend_new_interned_string(Z_STRVAL(var_name->u.constant), Z_STRLEN(var_name->u.constant) + 1, 0 TSRMLS_CC), Z_STRLEN(var_name->u.constant), property, access_type, comment, comment_len TSRMLS_CC);
 	efree(Z_STRVAL(var_name->u.constant));
 }
@@ -6896,7 +6899,7 @@ ZEND_API void zend_initialize_class_data(zend_class_entry *ce, zend_bool nullify
 	ce->default_properties_table = NULL;
 	ce->default_static_members_table = NULL;
 	zend_hash_init_ex(&ce->properties_info, 0, NULL, (dtor_func_t) (persistent_hashes ? zend_destroy_property_info_internal : zend_destroy_property_info), persistent_hashes, 0);
-	zend_hash_init_ex(&ce->constants_table, 0, NULL, zval_ptr_dtor_func, persistent_hashes, 0);
+	zend_hash_init_ex(&ce->constants_table, 0, NULL, zval_ptr_dtor_func, persistent_hashes, 0); //初始化类成员变量
 	zend_hash_init_ex(&ce->function_table, 0, NULL, ZEND_FUNCTION_DTOR, persistent_hashes, 0);
 
 	if (ce->type == ZEND_INTERNAL_CLASS) {

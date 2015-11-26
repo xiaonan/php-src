@@ -337,8 +337,8 @@ typedef struct _zend_mm_block_info {
 #if ZEND_MM_COOKIES
 	size_t _cookie;
 #endif
-	size_t _size;
-	size_t _prev;
+	size_t _size; //block的大小
+	size_t _prev; //计算前一个块有用到
 } zend_mm_block_info;
 
 #if ZEND_DEBUG
@@ -376,7 +376,7 @@ typedef struct _zend_mm_block {
 #endif
 } zend_mm_block;
 
-typedef struct _zend_mm_small_free_block {
+typedef struct _zend_mm_small_free_block { //双向链表
 	zend_mm_block_info info;
 #if ZEND_DEBUG
 	unsigned int magic;
@@ -384,11 +384,11 @@ typedef struct _zend_mm_small_free_block {
 	THREAD_T thread_id;
 # endif
 #endif
-	struct _zend_mm_free_block *prev_free_block;
-	struct _zend_mm_free_block *next_free_block;
-} zend_mm_small_free_block;
+	struct _zend_mm_free_block *prev_free_block; //前一个块
+	struct _zend_mm_free_block *next_free_block; //后一个块
+} zend_mm_small_free_block; //小的空闲块
 
-typedef struct _zend_mm_free_block {
+typedef struct _zend_mm_free_block { //双向链表+树结构
 	zend_mm_block_info info;
 #if ZEND_DEBUG
 	unsigned int magic;
@@ -396,49 +396,49 @@ typedef struct _zend_mm_free_block {
 	THREAD_T thread_id;
 # endif
 #endif
-	struct _zend_mm_free_block *prev_free_block;
-	struct _zend_mm_free_block *next_free_block;
+	struct _zend_mm_free_block *prev_free_block; //前一个块
+	struct _zend_mm_free_block *next_free_block; //后一个块
 
-	struct _zend_mm_free_block **parent;
-	struct _zend_mm_free_block *child[2];
+	struct _zend_mm_free_block **parent; //父节点
+	struct _zend_mm_free_block *child[2]; //两个子节点
 } zend_mm_free_block;
 
 #define ZEND_MM_NUM_BUCKETS (sizeof(size_t) << 3)
 
-#define ZEND_MM_CACHE 1
-#define ZEND_MM_CACHE_SIZE (ZEND_MM_NUM_BUCKETS * 4 * 1024)
+#define ZEND_MM_CACHE 1  //是否启用缓存
+#define ZEND_MM_CACHE_SIZE (ZEND_MM_NUM_BUCKETS * 4 * 1024) //缓存大小
 
 #ifndef ZEND_MM_CACHE_STAT
 # define ZEND_MM_CACHE_STAT 0
 #endif
-
+//堆结构
 struct _zend_mm_heap {
-	int                 use_zend_alloc;
-	void               *(*_malloc)(size_t);
-	void                (*_free)(void*);
-	void               *(*_realloc)(void*, size_t);
-	size_t              free_bitmap;
-	size_t              large_free_bitmap;
-	size_t              block_size;
-	size_t              compact_size;
-	zend_mm_segment    *segments_list;
-	zend_mm_storage    *storage;
-	size_t              real_size;
-	size_t              real_peak;
-	size_t              limit;
-	size_t              size;
-	size_t              peak;
-	size_t              reserve_size;
-	void               *reserve;
-	int                 overflow;
-	int                 internal;
+	int                 use_zend_alloc; //是否使用zend内存管理器
+	void               *(*_malloc)(size_t); //内存分配函数
+	void                (*_free)(void*); //内存释放函数
+	void               *(*_realloc)(void*, size_t); //从新申请内存函数
+	size_t              free_bitmap; //小块空闲内存标识
+	size_t              large_free_bitmap; //大块空闲内存标识
+	size_t              block_size; //一次内存分配的段大小,即ZEND_MM_SEG_SIZE指定的大小，默认为ZEND_MM_SEG_SIZE (256*2014)
+	size_t              compact_size;  //压缩操作边界值,为ZEND_MM_COMPACT指定大小，默认为2*1024*1024
+	zend_mm_segment    *segments_list; //段指针列表
+	zend_mm_storage    *storage; //所调用的存储层
+	size_t              real_size; //堆的真实大小
+	size_t              real_peak; //堆真实大小的峰值
+	size_t              limit; //堆的内存边界
+	size_t              size; //堆大小
+	size_t              peak; //堆大小的峰值
+	size_t              reserve_size; //备用堆大小
+	void               *reserve; //备用堆
+	int                 overflow; //内存溢出数
+	int                 internal; 
 #if ZEND_MM_CACHE
-	unsigned int        cached;
-	zend_mm_free_block *cache[ZEND_MM_NUM_BUCKETS];
+	unsigned int        cached; //已缓存大小
+	zend_mm_free_block *cache[ZEND_MM_NUM_BUCKETS]; //缓存数组
 #endif
-	zend_mm_free_block *free_buckets[ZEND_MM_NUM_BUCKETS*2];
-	zend_mm_free_block *large_free_buckets[ZEND_MM_NUM_BUCKETS];
-	zend_mm_free_block *rest_buckets[2];
+	zend_mm_free_block *free_buckets[ZEND_MM_NUM_BUCKETS*2]; //小块内存数组，相当于索引的角色
+	zend_mm_free_block *large_free_buckets[ZEND_MM_NUM_BUCKETS]; //大块内存数组，相当于索引角色
+	zend_mm_free_block *rest_buckets[2]; //剩余内存数组
 	int                 rest_count;
 #if ZEND_MM_CACHE_STAT
 	struct {
@@ -537,7 +537,7 @@ static unsigned int _zend_mm_cookie = 0;
 #define ZEND_MM_MAX_SMALL_SIZE				((ZEND_MM_NUM_BUCKETS<<ZEND_MM_ALIGNMENT_LOG2)+ZEND_MM_ALIGNED_MIN_HEADER_SIZE)
 
 #define ZEND_MM_TRUE_SIZE(size)				((size<ZEND_MM_MIN_SIZE)?(ZEND_MM_ALIGNED_MIN_HEADER_SIZE):(ZEND_MM_ALIGNED_SIZE(size+ZEND_MM_ALIGNED_HEADER_SIZE+END_MAGIC_SIZE)))
-
+//free_bucket小块内存列表hash函数
 #define ZEND_MM_BUCKET_INDEX(true_size)		((true_size>>ZEND_MM_ALIGNMENT_LOG2)-(ZEND_MM_ALIGNED_MIN_HEADER_SIZE>>ZEND_MM_ALIGNMENT_LOG2))
 
 #define ZEND_MM_SMALL_SIZE(true_size)		(true_size < ZEND_MM_MAX_SMALL_SIZE)
@@ -905,12 +905,12 @@ static inline void zend_mm_init(zend_mm_heap *heap)
 		heap->cache_stat[i].count = 0;
 	}
 #endif
-	p = ZEND_MM_SMALL_FREE_BUCKET(heap, 0);
+	p = ZEND_MM_SMALL_FREE_BUCKET(heap, 0); //小块内存初始化
 	for (i = 0; i < ZEND_MM_NUM_BUCKETS; i++) {
 		p->next_free_block = p;
 		p->prev_free_block = p;
 		p = (zend_mm_free_block*)((char*)p + sizeof(zend_mm_free_block*) * 2);
-		heap->large_free_buckets[i] = NULL;
+		heap->large_free_buckets[i] = NULL; //大块内存初始化
 	}
 	heap->rest_buckets[0] = heap->rest_buckets[1] = ZEND_MM_REST_BUCKET(heap);
 	heap->rest_count = 0;
@@ -1039,6 +1039,7 @@ static void zend_mm_random(unsigned char *buf, size_t size) /* {{{ */
  * - This function may alter the block_sizes values to match platform alignment
  * - This function does *not* perform sanity checks on the arguments
  */
+//初始化堆层
 ZEND_API zend_mm_heap *zend_mm_startup_ex(const zend_mm_mem_handlers *handlers, size_t block_size, size_t reserve_size, int internal, void *params)
 {
 	zend_mm_storage *storage;
@@ -1160,11 +1161,12 @@ ZEND_API zend_mm_heap *zend_mm_startup_ex(const zend_mm_mem_handlers *handlers, 
 	return heap;
 }
 
+//初始内存管理调用函数
 ZEND_API zend_mm_heap *zend_mm_startup(void)
 {
 	int i;
 	size_t seg_size;
-	char *mem_type = getenv("ZEND_MM_MEM_TYPE");
+	char *mem_type = getenv("ZEND_MM_MEM_TYPE"); //环境变量，根据系统判定
 	char *tmp;
 	const zend_mm_mem_handlers *handlers;
 	zend_mm_heap *heap;
@@ -1877,6 +1879,7 @@ static zend_mm_free_block *zend_mm_search_large_block(zend_mm_heap *heap, size_t
 	return best_fit->next_free_block;
 }
 
+//内除申请处理函数
 static void *_zend_mm_alloc_int(zend_mm_heap *heap, size_t size ZEND_FILE_LINE_DC ZEND_FILE_LINE_ORIG_DC)
 {
 	zend_mm_free_block *best_fit;
@@ -1899,7 +1902,7 @@ static void *_zend_mm_alloc_int(zend_mm_heap *heap, size_t size ZEND_FILE_LINE_D
 		if (UNEXPECTED(true_size < size)) {
 			goto out_of_memory;
 		}
-#if ZEND_MM_CACHE
+#if ZEND_MM_CACHE //命中缓存
 		if (EXPECTED(heap->cache[index] != NULL)) {
 			/* Get block from cache */
 #if ZEND_MM_CACHE_STAT
@@ -1915,12 +1918,12 @@ static void *_zend_mm_alloc_int(zend_mm_heap *heap, size_t size ZEND_FILE_LINE_D
 			return ZEND_MM_DATA_OF(best_fit);
  		}
 #if ZEND_MM_CACHE_STAT
-		heap->cache_stat[index].miss++;
+		heap->cache_stat[index].miss++;  //没有命中缓存
 #endif
 #endif
 
 		bitmap = heap->free_bitmap >> index;
-		if (bitmap) {
+		if (bitmap) { //寻找合适大小的内存块
 			/* Found some "small" free block that can be used */
 			index += zend_mm_low_bit(bitmap);
 			best_fit = heap->free_buckets[index*2];
@@ -1935,7 +1938,7 @@ static void *_zend_mm_alloc_int(zend_mm_heap *heap, size_t size ZEND_FILE_LINE_D
 	heap->cache_stat[ZEND_MM_NUM_BUCKETS].miss++;
 #endif
 
-	best_fit = zend_mm_search_large_block(heap, true_size);
+	best_fit = zend_mm_search_large_block(heap, true_size); //寻找大内存块
 
 	if (!best_fit && heap->real_size >= heap->limit - heap->block_size) {
 		zend_mm_free_block *p = heap->rest_buckets[0];
@@ -1973,13 +1976,13 @@ static void *_zend_mm_alloc_int(zend_mm_heap *heap, size_t size ZEND_FILE_LINE_D
 #endif
 			HANDLE_UNBLOCK_INTERRUPTIONS();
 #if ZEND_DEBUG
-			zend_mm_safe_error(heap, "Allowed memory size of %ld bytes exhausted at %s:%d (tried to allocate %lu bytes)", heap->limit, __zend_filename, __zend_lineno, size);
+			zend_mm_safe_error(heap, "Allowed memory size of %ld bytes exhausted at %s:%d (tried to allocate %lu bytes)", heap->limit, __zend_filename, __zend_lineno, size); //内存超出限制
 #else
 			zend_mm_safe_error(heap, "Allowed memory size of %ld bytes exhausted (tried to allocate %lu bytes)", heap->limit, size);
 #endif
 		}
 
-		segment = (zend_mm_segment *) ZEND_MM_STORAGE_ALLOC(segment_size);
+		segment = (zend_mm_segment *) ZEND_MM_STORAGE_ALLOC(segment_size); //向系统申请内存
 
 		if (!segment) {
 			/* Storage manager cannot allocate memory */
@@ -1989,7 +1992,7 @@ static void *_zend_mm_alloc_int(zend_mm_heap *heap, size_t size ZEND_FILE_LINE_D
 out_of_memory:
 			HANDLE_UNBLOCK_INTERRUPTIONS();
 #if ZEND_DEBUG
-			zend_mm_safe_error(heap, "Out of memory (allocated %ld) at %s:%d (tried to allocate %lu bytes)", heap->real_size, __zend_filename, __zend_lineno, size);
+			zend_mm_safe_error(heap, "Out of memory (allocated %ld) at %s:%d (tried to allocate %lu bytes)", heap->real_size, __zend_filename, __zend_lineno, size); //内存超出限制
 #else
 			zend_mm_safe_error(heap, "Out of memory (allocated %ld) (tried to allocate %lu bytes)", heap->real_size, size);
 #endif
@@ -2053,10 +2056,10 @@ zend_mm_finished_searching_for_block:
 
 	HANDLE_UNBLOCK_INTERRUPTIONS();
 
-	return ZEND_MM_DATA_OF(best_fit);
+	return ZEND_MM_DATA_OF(best_fit); //返回内存分配地址
 }
 
-
+//内存的销毁
 static void _zend_mm_free_int(zend_mm_heap *heap, void *p ZEND_FILE_LINE_DC ZEND_FILE_LINE_ORIG_DC)
 {
 	zend_mm_block *mm_block;

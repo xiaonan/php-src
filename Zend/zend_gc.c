@@ -127,6 +127,7 @@ ZEND_API void gc_init(TSRMLS_D)
 	}
 }
 
+//垃圾回收函数
 ZEND_API void gc_zval_possible_root(zval *zv TSRMLS_DC)
 {
 	if (UNEXPECTED(GC_G(free_list) != NULL &&
@@ -146,7 +147,7 @@ ZEND_API void gc_zval_possible_root(zval *zv TSRMLS_DC)
 
 	GC_BENCH_INC(zval_possible_root);
 
-	if (GC_ZVAL_GET_COLOR(zv) != GC_PURPLE) {
+	if (GC_ZVAL_GET_COLOR(zv) != GC_PURPLE) { //不为紫色
 		GC_ZVAL_SET_PURPLE(zv);
 
 		if (!GC_ZVAL_ADDRESS(zv)) {
@@ -169,7 +170,7 @@ ZEND_API void gc_zval_possible_root(zval *zv TSRMLS_DC)
 				if (!newRoot) {
 					return;
 				}
-				GC_ZVAL_SET_PURPLE(zv);
+				GC_ZVAL_SET_PURPLE(zv); //设置为紫色
 				GC_G(unused) = newRoot->prev;
 			}
 
@@ -369,7 +370,7 @@ static void zobj_scan_black(struct _store_object *obj, zval *pz TSRMLS_DC)
 		}
 	}
 }
-
+//节点置为灰色
 static void zval_mark_grey(zval *pz TSRMLS_DC)
 {
 	Bucket *p;

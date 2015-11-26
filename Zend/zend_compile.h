@@ -363,8 +363,8 @@ typedef union _zend_function {
 
 
 typedef struct _zend_function_state {
-	zend_function *function;
-	void **arguments;
+	zend_function *function; //用户自定义函数结构体指针
+	void **arguments; //函数参数指针
 } zend_function_state;
 
 
@@ -392,9 +392,10 @@ typedef struct _call_slot {
 	zend_bool          is_ctor_result_used;
 } call_slot;
 
+//运行时信息存储
 struct _zend_execute_data {
-	struct _zend_op *opline;
-	zend_function_state function_state;
+	struct _zend_op *opline; //opcode
+	zend_function_state function_state; //函数初始化
 	zend_op_array *op_array;
 	zval *object;
 	HashTable *symbol_table; /*函数内部局部变量*/
